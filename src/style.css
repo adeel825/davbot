@@ -1,0 +1,256 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #333;
+}
+
+.container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  width: 100%;
+  max-width: 450px;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  padding: 30px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+header p {
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+.chat-interface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  gap: 30px;
+}
+
+.avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar.speaking {
+  transform: scale(1.1);
+  animation: pulse 1.5s infinite;
+}
+
+.avatar.responding {
+  animation: blink 0.8s infinite;
+}
+
+.avatar.listening {
+  animation: glow 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1.1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  25% { opacity: 0.3; }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
+  50% { 
+    box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+  }
+}
+
+.status {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.status.listening {
+  color: #10b981;
+}
+
+.status.responding {
+  color: #3b82f6;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+}
+
+.mic-button {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  border-radius: 50px;
+  padding: 20px 30px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.mic-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+}
+
+.mic-button:active {
+  transform: translateY(0);
+}
+
+.mic-button.recording {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  animation: recordingPulse 1.5s infinite;
+}
+
+.mic-button.disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@keyframes recordingPulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 10px 40px rgba(239, 68, 68, 0.6); }
+}
+
+.mic-icon {
+  font-size: 1.2rem;
+}
+
+.conversation-log {
+  background: #f9fafb;
+  border-radius: 15px;
+  padding: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+}
+
+.message {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.system-message {
+  background: #e0e7ff;
+  color: #3730a3;
+  text-align: center;
+  font-style: italic;
+}
+
+.user-message {
+  background: #dbeafe;
+  color: #1e40af;
+  margin-left: 20px;
+}
+
+.agent-message {
+  background: #d1fae5;
+  color: #065f46;
+  margin-right: 20px;
+}
+
+footer {
+  background: #f3f4f6;
+  padding: 15px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .container {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+  }
+  
+  header {
+    padding: 20px;
+  }
+  
+  header h1 {
+    font-size: 2rem;
+  }
+  
+  .chat-interface {
+    padding: 20px;
+    gap: 20px;
+  }
+  
+  .avatar {
+    width: 100px;
+    height: 100px;
+    font-size: 3rem;
+  }
+  
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+  }
+}

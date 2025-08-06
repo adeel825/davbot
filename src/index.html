@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DavBot - Voice Agent</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DavBot</h1>
+      <p>Talk to Davinder Singh's Digital Twin</p>
+    </header>
+    
+    <main class="chat-interface">
+      <div class="avatar-container">
+        <div class="avatar">
+          <img src="davbot.png" alt="DavBot Avatar" class="avatar-image">
+        </div>
+        <div class="status" id="status">Ready to chat</div>
+      </div>
+      
+      <div class="controls">
+        <button class="mic-button" id="micButton">
+          <span class="mic-icon">🎙️</span>
+          <span class="button-text">Start Conversation</span>
+        </button>
+      </div>
+      
+      <div class="conversation-log" id="conversationLog">
+        <div class="message system-message">
+          Welcome! Click the microphone to start talking with DavBot.
+        </div>
+      </div>
+    </main>
+    
+    <footer>
+      <p>Powered by Vapi.ai</p>
+      <p>Developed by Anna, Dilan, and Adeel</p>
+    </footer>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
