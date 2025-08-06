@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
-    "start": "node server.js"
+    "start": "node server-prod.js"
   },
   "keywords": [],
   "author": "",
