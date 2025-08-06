@@ -128,6 +128,30 @@ header p {
   color: #3b82f6;
 }
 
+.network-indicator {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 5px;
+  min-height: 20px;
+}
+
+.network-indicator.wifi::before {
+  content: "📶 ";
+}
+
+.network-indicator.cellular::before {
+  content: "📱 ";
+}
+
+.network-indicator.poor {
+  color: #ef4444;
+}
+
+.network-indicator.good {
+  color: #10b981;
+}
+
 .controls {
   display: flex;
   justify-content: center;

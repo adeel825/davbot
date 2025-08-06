@@ -24,6 +24,7 @@ class DavBot {
     this.conversationLog = document.getElementById('conversationLog')
     this.avatar = document.querySelector('.avatar')
     this.buttonText = document.querySelector('.button-text')
+    this.networkIndicator = document.getElementById('networkIndicator')
   }
 
   setupEventListeners() {
@@ -46,17 +47,101 @@ class DavBot {
     })
   }
 
-  checkMobileCompatibility() {
+  async checkMobileCompatibility() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     
     if (isMobile) {
-      this.addMessage('system', '📱 Mobile detected. For best experience: keep app in foreground and ensure stable WiFi connection.')
+      // Check network connection type
+      const networkInfo = await this.getNetworkInfo()
+      this.updateNetworkIndicator(networkInfo)
+      
+      if (networkInfo.cellular) {
+        this.addMessage('system', '📶 Cellular connection detected. Voice quality may be affected by network stability. WiFi recommended for best experience.')
+        this.addMessage('system', '💡 Tip: Try moving to an area with stronger cellular signal or switch to WiFi.')
+      } else {
+        this.addMessage('system', '📱 Mobile detected. For best experience: keep app in foreground during conversations.')
+      }
       
       if (isIOS) {
         this.addMessage('system', '🍎 iOS users: Please use Safari browser and grant microphone permissions when prompted.')
       }
+    } else {
+      // Still check network for desktop
+      const networkInfo = await this.getNetworkInfo()
+      this.updateNetworkIndicator(networkInfo)
     }
+  }
+
+  updateNetworkIndicator(networkInfo) {
+    if (!this.networkIndicator) return
+    
+    this.networkIndicator.className = 'network-indicator'
+    
+    if (networkInfo.cellular) {
+      this.networkIndicator.classList.add('cellular')
+      
+      if (networkInfo.effectiveType && ['slow-2g', '2g'].includes(networkInfo.effectiveType)) {
+        this.networkIndicator.classList.add('poor')
+        this.networkIndicator.textContent = 'Poor cellular connection'
+      } else if (networkInfo.effectiveType === '3g') {
+        this.networkIndicator.textContent = 'Moderate cellular connection'
+      } else {
+        this.networkIndicator.classList.add('good')
+        this.networkIndicator.textContent = 'Cellular connection'
+      }
+    } else {
+      this.networkIndicator.classList.add('wifi')
+      this.networkIndicator.classList.add('good')
+      this.networkIndicator.textContent = 'Good connection'
+    }
+  }
+
+  async getNetworkInfo() {
+    const networkInfo = {
+      cellular: false,
+      effectiveType: 'unknown',
+      downlink: null,
+      rtt: null
+    }
+
+    // Check Network Information API (limited support)
+    if ('connection' in navigator) {
+      const connection = navigator.connection
+      networkInfo.effectiveType = connection.effectiveType || 'unknown'
+      networkInfo.downlink = connection.downlink
+      networkInfo.rtt = connection.rtt
+      networkInfo.cellular = connection.type === 'cellular' || 
+                            ['slow-2g', '2g', '3g'].includes(connection.effectiveType)
+    }
+
+    // Fallback detection methods
+    if (!networkInfo.cellular) {
+      // Check if on mobile device without WiFi indicators
+      const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
+      if (isMobile) {
+        // Simple bandwidth test to estimate connection type
+        try {
+          const start = performance.now()
+          await fetch('/health?t=' + Date.now(), { 
+            method: 'HEAD',
+            cache: 'no-cache' 
+          })
+          const rtt = performance.now() - start
+          
+          // High RTT often indicates cellular
+          if (rtt > 150) {
+            networkInfo.cellular = true
+            networkInfo.rtt = rtt
+          }
+        } catch (error) {
+          // If health check fails, assume unstable connection
+          networkInfo.cellular = true
+        }
+      }
+    }
+
+    return networkInfo
   }
 
   async startCall() {
@@ -79,6 +164,12 @@ class DavBot {
 
       // Request wake lock on mobile to prevent screen sleep
       await this.requestWakeLock()
+
+      // Check network type and apply optimizations
+      const networkInfo = await this.getNetworkInfo()
+      if (networkInfo.cellular) {
+        await this.applyCellularOptimizations()
+      }
 
       // Start the conversation
       await this.vapi.start(this.config.assistant)
@@ -142,6 +233,19 @@ class DavBot {
     }
   }
 
+  async applyCellularOptimizations() {
+    try {
+      console.log('Applying cellular network optimizations...')
+      this.addMessage('system', '📶 Optimizing for cellular connection...')
+      
+      // Add extra buffer time for cellular connections
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+    } catch (error) {
+      console.log('Could not apply cellular optimizations:', error)
+    }
+  }
+
   optimizeAudioForMobile() {
     try {
       const dailyCall = this.vapi.getDailyCallObject()
@@ -165,6 +269,35 @@ class DavBot {
     }
   }
 
+  async applyCellularAudioSettings() {
+    try {
+      const dailyCall = this.vapi.getDailyCallObject()
+      if (dailyCall) {
+        // More aggressive settings for cellular
+        dailyCall.updateInputSettings({
+          audio: {
+            processor: {
+              type: 'none'
+            }
+          }
+        })
+
+        // Lower quality settings for better stability on cellular
+        dailyCall.updateSendSettings({
+          video: false, // Disable video to save bandwidth
+          audio: {
+            codec: 'opus',
+            bitrate: 32000 // Lower bitrate for cellular
+          }
+        })
+        
+        console.log('Applied cellular-specific audio settings')
+      }
+    } catch (error) {
+      console.log('Could not apply cellular audio settings:', error)
+    }
+  }
+
   setupVapiEventListeners() {
     // Call started
     this.vapi.on('call-start', () => {
@@ -179,6 +312,13 @@ class DavBot {
       // Mobile-specific audio optimization
       if (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
         this.optimizeAudioForMobile()
+        
+        // Apply additional cellular optimizations if needed
+        this.getNetworkInfo().then(networkInfo => {
+          if (networkInfo.cellular) {
+            this.applyCellularAudioSettings()
+          }
+        })
       }
     })
 
@@ -241,11 +381,12 @@ class DavBot {
     // Error handling
     this.vapi.on('error', (error) => {
       console.error('Vapi error:', error)
-      this.updateStatus('Connection error', 'error')
-      this.addMessage('system', `Error: ${error.message || 'Unknown error occurred'}`)
       this.isCallActive = false
       this.setButtonState('idle')
       this.setAvatarState('idle')
+      
+      // Enhanced error handling based on error type
+      this.handleConnectionError(error)
     })
   }
 
@@ -294,6 +435,47 @@ class DavBot {
     // Add the new state class
     if (state !== 'idle') {
       this.avatar.classList.add(state)
+    }
+  }
+
+  async handleConnectionError(error) {
+    const errorMessage = error.message || 'Unknown error occurred'
+    console.log('Handling connection error:', errorMessage)
+    
+    // Check network type for specific error handling
+    const networkInfo = await this.getNetworkInfo()
+    
+    if (networkInfo.cellular) {
+      if (errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+        this.updateStatus('Cellular network issue detected', 'error')
+        this.addMessage('system', '📶 Poor cellular connection detected. Try:')
+        this.addMessage('system', '• Moving to an area with better signal')
+        this.addMessage('system', '• Switching to WiFi if available')
+        this.addMessage('system', '• Waiting a moment and retrying')
+        
+        // Auto-retry for network issues on cellular
+        setTimeout(() => {
+          if (this.connectionRetries < 2) {
+            this.addMessage('system', 'Auto-retrying connection...')
+            this.startCall()
+          }
+        }, 3000)
+      } else {
+        this.updateStatus('Connection error', 'error')
+        this.addMessage('system', `Cellular Error: ${errorMessage}`)
+      }
+    } else {
+      // Standard error handling for WiFi/other connections
+      this.updateStatus('Connection error', 'error')
+      this.addMessage('system', `Error: ${errorMessage}`)
+      
+      // Auto-retry for any network error
+      if (this.connectionRetries < this.maxRetries && errorMessage.includes('network')) {
+        setTimeout(() => {
+          this.addMessage('system', `Retrying... (${this.connectionRetries + 1}/${this.maxRetries})`)
+          this.startCall()
+        }, 2000)
+      }
     }
   }
 
