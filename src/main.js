@@ -4,8 +4,12 @@ class DavBot {
   constructor() {
     this.vapi = null
     this.isCallActive = false
+    this.wakeLock = null
+    this.connectionRetries = 0
+    this.maxRetries = 3
     this.initializeElements()
     this.setupEventListeners()
+    this.checkMobileCompatibility()
     
     // Configuration - Uses environment variables
     this.config = {
@@ -30,6 +34,29 @@ class DavBot {
         this.startCall()
       }
     })
+
+    // Handle page visibility changes (mobile browsers backgrounding)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.isCallActive) {
+        console.log('Page hidden, monitoring connection...')
+      } else if (!document.hidden && this.isCallActive) {
+        console.log('Page visible again')
+        this.checkConnectionHealth()
+      }
+    })
+  }
+
+  checkMobileCompatibility() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    
+    if (isMobile) {
+      this.addMessage('system', '📱 Mobile detected. For best experience: keep app in foreground and ensure stable WiFi connection.')
+      
+      if (isIOS) {
+        this.addMessage('system', '🍎 iOS users: Please use Safari browser and grant microphone permissions when prompted.')
+      }
+    }
   }
 
   async startCall() {
@@ -50,6 +77,9 @@ class DavBot {
       // Set up event listeners
       this.setupVapiEventListeners()
 
+      // Request wake lock on mobile to prevent screen sleep
+      await this.requestWakeLock()
+
       // Start the conversation
       await this.vapi.start(this.config.assistant)
       
@@ -58,6 +88,80 @@ class DavBot {
       this.updateStatus('Failed to start conversation', 'error')
       this.addMessage('system', `Error: ${error.message}`)
       this.setButtonState('idle')
+      this.connectionRetries++
+      
+      // Attempt auto-retry on mobile
+      if (this.connectionRetries < this.maxRetries && /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          this.addMessage('system', `Retrying connection... (${this.connectionRetries}/${this.maxRetries})`)
+          this.startCall()
+        }, 2000)
+      }
+    }
+  }
+
+  async requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        this.wakeLock = await navigator.wakeLock.request('screen')
+        console.log('Wake lock acquired')
+        
+        this.wakeLock.addEventListener('release', () => {
+          console.log('Wake lock released')
+        })
+      }
+    } catch (error) {
+      console.log('Wake lock not supported or failed:', error)
+    }
+  }
+
+  async releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        await this.wakeLock.release()
+        this.wakeLock = null
+        console.log('Wake lock released manually')
+      } catch (error) {
+        console.log('Error releasing wake lock:', error)
+      }
+    }
+  }
+
+  checkConnectionHealth() {
+    if (this.isCallActive && this.vapi) {
+      // Simple connection health check
+      const dailyCall = this.vapi.getDailyCallObject()
+      if (dailyCall) {
+        const participants = dailyCall.participants()
+        console.log('Connection health check - participants:', Object.keys(participants).length)
+        
+        if (Object.keys(participants).length === 0) {
+          this.addMessage('system', '⚠️ Connection may have been lost. Try reconnecting if issues persist.')
+        }
+      }
+    }
+  }
+
+  optimizeAudioForMobile() {
+    try {
+      const dailyCall = this.vapi.getDailyCallObject()
+      if (dailyCall) {
+        // Optimize audio settings for mobile
+        dailyCall.updateInputSettings({
+          audio: {
+            processor: {
+              type: 'none' // Disable audio processing that might cause issues on mobile
+            }
+          }
+        })
+
+        // Set audio output device explicitly
+        dailyCall.setOutputDeviceAsync({ deviceId: 'default' })
+        
+        console.log('Applied mobile audio optimizations')
+      }
+    } catch (error) {
+      console.log('Could not apply mobile audio optimizations:', error)
     }
   }
 
@@ -70,6 +174,12 @@ class DavBot {
       this.setButtonState('active')
       this.setAvatarState('listening')
       this.addMessage('system', 'Connected to DavBot! You can start speaking now.')
+      this.connectionRetries = 0 // Reset on successful connection
+      
+      // Mobile-specific audio optimization
+      if (/Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        this.optimizeAudioForMobile()
+      }
     })
 
     // Call ended
@@ -143,6 +253,8 @@ class DavBot {
     if (this.vapi && this.isCallActive) {
       this.vapi.stop()
       this.updateStatus('Ending conversation...', 'ending')
+      this.releaseWakeLock()
+      this.connectionRetries = 0 // Reset retry counter
     }
   }
 

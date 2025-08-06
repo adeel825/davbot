@@ -223,11 +223,29 @@ footer {
   font-size: 0.9rem;
 }
 
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  body {
+    /* Prevent zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+    /* Improve touch performance */
+    touch-action: manipulation;
+  }
+  
+  .container {
+    margin: 5px;
+    max-width: calc(100vw - 10px);
+    min-height: calc(100vh - 10px);
+  }
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .container {
-    margin: 10px;
-    max-width: calc(100vw - 20px);
+    margin: 0;
+    max-width: 100vw;
+    min-height: 100vh;
+    border-radius: 0;
   }
   
   header {
@@ -239,8 +257,8 @@ footer {
   }
   
   .chat-interface {
-    padding: 20px;
-    gap: 20px;
+    padding: 15px;
+    gap: 15px;
   }
   
   .avatar {
@@ -252,5 +270,40 @@ footer {
   .avatar-image {
     width: 100%;
     height: 100%;
+  }
+  
+  .mic-button {
+    padding: 18px 25px;
+    font-size: 1rem;
+    /* Make button easier to tap on mobile */
+    min-height: 60px;
+    min-width: 200px;
+  }
+  
+  .conversation-log {
+    max-height: 150px;
+    font-size: 0.85rem;
+  }
+  
+  .status {
+    font-size: 1rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .chat-interface {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .avatar {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .mic-button {
+    padding: 15px 20px;
+    min-width: 180px;
   }
 }
